@@ -1,19 +1,30 @@
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, KafkaProducer
 from const import *
 import sys
 
-# Create consumer: Option 1 -- only consume new events
-consumer = KafkaConsumer(bootstrap_servers=[BROKER_ADDR + ':' + BROKER_PORT])
-
-# Create consumer: Option 2 -- consume old events (uncomment to test -- and comment Option 1 above)
-#consumer = KafkaConsumer(bootstrap_servers=[BROKER_ADDR + ':' + BROKER_PORT], auto_offset_reset='earliest')
-
 try:
-  topic = sys.argv[1]
+    topic_in  = sys.argv[1]  # topic1: onde consome
+    topic_out = sys.argv[2]  # topic2: onde publica
 except:
-  print ('Usage: python3 consumer <topic_name>')
-  exit(1)
-  
-consumer.subscribe([topic])
+    print('Usage: python3 consumer_producer.py <topic_in> <topic_out>')
+    exit(1)
+consumer = KafkaConsumer(
+    bootstrap_servers=[BROKER_ADDR + ':' + BROKER_PORT]
+)
+consumer.subscribe([topic_in])
+
+producer = KafkaProducer(
+    bootstrap_servers=[BROKER_ADDR + ':' + BROKER_PORT]
+)
+
+print(f'[*] Consumindo de "{topic_in}" e publicando em "{topic_out}"...')
+
 for msg in consumer:
-    print (msg.value)
+    received = msg.value.decode()
+    print(f'[RECEBIDO]  {received}')
+
+    processed = received.upper() + ' [PROCESSED]'
+
+    producer.send(topic_out, value=processed.encode())
+    producer.flush()
+    print(f'[PUBLICADO] {processed}')
